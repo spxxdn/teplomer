@@ -1,0 +1,82 @@
+#include <WiFi.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <LiquidCrystal_I2C.h>
+ 
+// ===== TEPLOMĚR =====
+OneWire oneWire(4);
+DallasTemperature sensors(&oneWire);
+ 
+// ===== LCD =====
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+ 
+// ===== WiFi server =====
+WiFiServer server(80);
+ 
+void setup() {
+  Serial.begin(115200);
+ 
+  sensors.begin();
+ 
+  lcd.init();
+  lcd.backlight();
+ 
+  // WiFi AP
+  WiFi.softAP("ESP_Teplomer", "12345678");
+  Serial.print("IP adresa: ");
+  Serial.println(WiFi.softAPIP());
+ 
+  server.begin();
+}
+ 
+void loop() {
+  sensors.requestTemperatures();
+  float t = sensors.getTempCByIndex(0);
+ 
+  // ===== SERIAL MONITOR =====
+  Serial.print("Teplota: ");
+  if (t == DEVICE_DISCONNECTED_C) {
+    Serial.println("Chyba senzoru");
+  } else {
+    Serial.print(t, 1);
+    Serial.println(" °C");
+  }
+ 
+  // ===== LCD =====
+  lcd.setCursor(0, 0);
+  lcd.print("Teplota:");
+  lcd.setCursor(0, 1);
+  if (t == DEVICE_DISCONNECTED_C) {
+    lcd.print("Chyba senzoru ");
+  } else {
+    lcd.print(t, 1);
+    lcd.print((char)223);
+    lcd.print("C   ");
+  }
+ 
+  // ===== WEB =====
+  WiFiClient client = server.available();
+  if (client) {
+    client.readStringUntil('\r');
+ 
+    String html = "<html><head><meta http-equiv='refresh' content='2'></head><body>";
+    html += "<h1>Teplota: ";
+ 
+    if (t == DEVICE_DISCONNECTED_C) {
+      html += "Chyba senzoru";
+    } else {
+      html += String(t,1) + " C";
+    }
+ 
+    html += "</h1></body></html>";
+ 
+    client.println("HTTP/1.1 200 OK");
+    client.println("Content-Type: text/html");
+    client.println();
+    client.println(html);
+ 
+    client.stop();
+  }
+ 
+  delay(1000);
+}

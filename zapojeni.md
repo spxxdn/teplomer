@@ -1,0 +1,9 @@
+ZAPOJENÍ
+Teploměr: ČERNÁ -> GND
+ŽLUTÁ -> G4
+HNĚDÁ -> 3V3
+LCD: GND->GND
+VCC-> 5V
+SDA-> G21
+SCL->G22
+ESP->
